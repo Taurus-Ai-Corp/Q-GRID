@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.local
+*.pptx
+*.ppt
+attached_assets/*.pptx
+attached_assets/*.ppt
+.cache
+.local
+.upm
+.git/objects/

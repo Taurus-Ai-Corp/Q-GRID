@@ -1,0 +1,282 @@
+~/workspace$ cd ~/workspace
+rm -rf .git
+git init
+git remote add origin https://github.com/Taurus-Ai-Corp/Q-GRID.git
+git add -A
+git commit -m "Initial commit: Q_GRID production-ready CBDC platform"
+git branch -M main
+git push -u origin main --force
+Initialized empty Git repository in /home/runner/workspace/.git/
+[main (root-commit) ff4b45f] Initial commit: Q_GRID production-ready CBDC platform
+ 212 files changed, 60387 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 .replit
+ create mode 100644 BUSINESS_MODEL_ANALYSIS.md
+ create mode 100644 HEDERA_INTEGRATION_GUIDE.md
+ create mode 100644 SETUP_SECRETS_GUIDE.md
+ create mode 100644 attached_assets/06_x402_API_Monetization_1763959659043.md
+ create mode 100644 attached_assets/07_x402_Offline_Settlement_1763959659043.md
+ create mode 100644 attached_assets/07_x402_Payment_Integration_1763959659043.md
+ create mode 100644 attached_assets/AGENT_1_HEDERA_RESEARCH_1763945390322.md
+ create mode 100644 attached_assets/AI_TRUST_SYSTEM_1763948178183.md
+ create mode 100644 attached_assets/ARCHITECTURE_SUMMARY_1763947763986.md
+ create mode 100644 attached_assets/ASSETGRID_HEDERA_STRATEGY_ADAPTED_1763956944641.md
+ create mode 100644 attached_assets/BLOCKCHAIN_ARCHITECTURE_1763947763986.md
+ create mode 100644 attached_assets/COINBASE_API_AUTOMATION_MASTER_COMMANDS_1763956480727.md
+ create mode 100644 attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md
+ create mode 100644 attached_assets/DELIVERABLES_SUMMARY_1763947896640.txt
+ create mode 100644 attached_assets/DEPLOYMENT_GUIDE_1763947736212.md
+ create mode 100644 attached_assets/FINTECH_HACKATHON_SOLUTION_TEMPLATE_1763947736233.md
+ create mode 100644 attached_assets/HACKATHON_BENEFITS_TECH_CAPABILITIES_1763947736233.md
+ create mode 100644 attached_assets/HEDERA_SDK_COMPARISON_MATRIX_1763945422121.md
+ create mode 100644 attached_assets/HEDERA_USE_CASES_INVENTORY_1763945422139.md
+ create mode 100644 attached_assets/IMPLEMENTATION_GUIDE_1763947796995.md
+ create mode 100644 attached_assets/IMPLEMENTATION_GUIDE_1763947896640.md
+ create mode 100644 attached_assets/INDUSTRY_LEADERSHIP_QA_FRAMEWORK_1763956480739.md
+ create mode 100644 attached_assets/MVP_DEMONSTRATION_GUIDE_1763942574830.md
+ create mode 100644 attached_assets/PITCH_DECK_OUTLINE_1763942479732.md
+ create mode 100644 attached_assets/PRESENTATION_1763942479745.md
+ create mode 100644 attached_assets/Pasted--AssetGrid-Real-World-Asset-Tokenization-markdown-Business-Model-Hedera-based-fra-1763944247159_1763944247160.txt
+ create mode 100644 attached_assets/Pasted--SDKs-Hedera-supported-and-community-maintained-SDKs-There-are-several-options-for-friendly-la-1763945860533_1763945860534.txt
+ create mode 100644 attached_assets/Pasted--plugin-vite-react-babel-home-runner-workspace-client-src-pages-cbdc-offline-flow-tsx-Support-for-1763959146709_1763959146713.txt
+ create mode 100644 attached_assets/Pasted--plugin-vite-react-babel-home-runner-workspace-client-src-pages-kyc-service-tsx-Unexpected-token--1763948683131_1763948683132.txt
+ create mode 100644 attached_assets/Pasted-India-Run-sponsored-campaigns-targeting-fintech-leaders-regulatory-bodies-RBI-NPCI-SEBI-and-d-1764155973851_1764155973853.txt
+ create mode 100644 attached_assets/QUANTUM_HEDERA_CBDC_REVOLUTION_1763947736232.md
+ create mode 100644 attached_assets/QUANTUM_RUPEE_TECHNICAL_WHITEPAPER_1763948149423.md
+ create mode 100644 attached_assets/QUICK_COINBASE_AUTOMATION_1763956480739.sh
+ create mode 100644 attached_assets/QUICK_COMMANDS_1763956480739.sh
+ create mode 100644 attached_assets/QUICK_REFERENCE_1763947896640.md
+ create mode 100644 attached_assets/RBI_COMPLIANT_ARCHITECTURE_DESIGN_1763947736232.md
+ create mode 100644 attached_assets/README_1763942479747.md
+ create mode 100644 attached_assets/README_1763942550321.md
+ create mode 100644 attached_assets/README_1763944244694.md
+ create mode 100644 attached_assets/README_1763945332951.md
+ create mode 100644 attached_assets/README_1763947763985.md
+ create mode 100644 attached_assets/README_1763947796996.md
+ create mode 100644 attached_assets/README_1763947896640.md
+ create mode 100644 attached_assets/RISKS_CHALLENGES_2000_CHARS_1763947736232.md
+ create mode 100644 attached_assets/SESSION_CONTEXT_2025-09-29_18-52-06_1763956480738.md
+ create mode 100644 attached_assets/SUBMISSION_CHECKLIST_1763948102563.md
+ create mode 100644 "attached_assets/Screenshot 2025-11-26 at 5.47.50\342\200\257AM_1764154077040.png"
+ create mode 100644 attached_assets/T-KYC_Competitive_Analysis_OSINT_1763959659029.md
+ create mode 100644 attached_assets/TECHNOLOGY_SELECTION_JUSTIFICATION_1763947763974.md
+ create mode 100644 attached_assets/TOKENIZED_KYC_SOLUTION_1763947796996.md
+ create mode 100644 attached_assets/TOKENIZED_KYC_SOLUTION_1763947896640.md
+ create mode 100644 attached_assets/VISUAL_DIAGRAMS_1763947796969.md
+ create mode 100644 attached_assets/VISUAL_DIAGRAMS_1763947896622.md
+ create mode 100644 attached_assets/active_processes_1763956533221.txt
+ create mode 100644 attached_assets/branding-1764175411375.json
+ create mode 100644 attached_assets/check_coinbase_status_1763956480740.py
+ create mode 100644 attached_assets/coinbase_api_automation_1763956480740.py
+ create mode 100644 attached_assets/coinbase_api_setup_real_time_1763956480740.py
+ create mode 100644 attached_assets/coinbase_automation_1763956480740.js
+ create mode 100644 attached_assets/coinbase_automation_1763959659044.js
+ create mode 100644 attached_assets/coinbase_direct_automation_1763956480740.py
+ create mode 100644 attached_assets/coinbase_kyc_automation_1763956586285.py
+ create mode 100644 attached_assets/coinbase_kyc_simple_1763956586285.py
+ create mode 100644 attached_assets/content-1764172879323.md
+ create mode 100644 attached_assets/content-1764175412830.md
+ create mode 100644 attached_assets/crypto_payment_cli_commands_1763959659044.py
+ create mode 100644 attached_assets/generated_images/abstract_data_stream_visualization_with_vertical_lines.png
+ create mode 100644 attached_assets/generated_images/abstract_digital_noise_glitch_texture,_black_and_white.png
+ create mode 100644 attached_assets/generated_images/dark_wireframe_globe_with_data_nodes_connecting.png
+ create mode 100644 attached_assets/generated_images/raw_concrete_wall_texture_with_cracks_and_industrial_grunge.png
+ create mode 100644 attached_assets/http_x402_payment_infrastructure_1763959659044.py
+ create mode 100644 attached_assets/logo.svg
+ create mode 100644 attached_assets/ogImage.png
+ create mode 100644 attached_assets/package_1763945346824.json
+ create mode 100644 attached_assets/package_1763945360085.json
+ create mode 100644 attached_assets/screenshot-1764161828787.png
+ create mode 100644 attached_assets/screenshot-1764175414112.png
+ create mode 100644 attached_assets/screenshot-1764246638043.png
+ create mode 100644 attached_assets/screenshot-1764247175776.png
+ create mode 100644 attached_assets/screenshot-1764247176766.png
+ create mode 100644 attached_assets/screenshot-1764247182024.png
+ create mode 100644 attached_assets/screenshot-1764247183951.png
+ create mode 100644 attached_assets/screenshot-1764247542756.png
+ create mode 100644 attached_assets/screenshot-1764247543448.png
+ create mode 100644 attached_assets/screenshot-1764247545889.png
+ create mode 100644 attached_assets/screenshot-1764247547838.png
+ create mode 100644 attached_assets/server_1763945346836.js
+ create mode 100644 attached_assets/server_1763945360080.js
+ create mode 100644 attached_assets/targeted_element_1763945160852.png
+ create mode 100644 attached_assets/targeted_element_1764158118296.png
+ create mode 100644 attached_assets/taurus_integration_1763944695543.py
+ create mode 100644 attached_assets/test_coinbase_advanced_api_1763956586285.py
+ create mode 100644 attached_assets/test_coinbase_api_1763956586284.py
+ create mode 100644 attached_assets/test_coinbase_comprehensive_1763956586283.py
+ create mode 100644 attached_assets/test_coinbase_developer_platform_1763956586238.py
+ create mode 100644 client/index.html
+ create mode 100644 client/public/favicon.png
+ create mode 100644 client/src/App.tsx
+ create mode 100644 client/src/components/Header.tsx
+ create mode 100644 client/src/components/account-balance.tsx
+ create mode 100644 client/src/components/crypto-grid-logo.tsx
+ create mode 100644 client/src/components/demo-section.tsx
+ create mode 100644 client/src/components/features.tsx
+ create mode 100644 client/src/components/hero.tsx
+ create mode 100644 client/src/components/tech-stack.tsx
+ create mode 100644 client/src/components/token-creator.tsx
+ create mode 100644 client/src/components/transaction-monitor.tsx
+ create mode 100644 client/src/components/ui/accordion.tsx
+ create mode 100644 client/src/components/ui/alert-dialog.tsx
+ create mode 100644 client/src/components/ui/alert.tsx
+ create mode 100644 client/src/components/ui/aspect-ratio.tsx
+ create mode 100644 client/src/components/ui/avatar.tsx
+ create mode 100644 client/src/components/ui/badge.tsx
+ create mode 100644 client/src/components/ui/breadcrumb.tsx
+ create mode 100644 client/src/components/ui/button-group.tsx
+ create mode 100644 client/src/components/ui/button.tsx
+ create mode 100644 client/src/components/ui/calendar.tsx
+ create mode 100644 client/src/components/ui/card.tsx
+ create mode 100644 client/src/components/ui/carousel.tsx
+ create mode 100644 client/src/components/ui/chart.tsx
+ create mode 100644 client/src/components/ui/checkbox.tsx
+ create mode 100644 client/src/components/ui/collapsible.tsx
+ create mode 100644 client/src/components/ui/command.tsx
+ create mode 100644 client/src/components/ui/context-menu.tsx
+ create mode 100644 client/src/components/ui/dialog.tsx
+ create mode 100644 client/src/components/ui/drawer.tsx
+ create mode 100644 client/src/components/ui/dropdown-menu.tsx
+ create mode 100644 client/src/components/ui/empty.tsx
+ create mode 100644 client/src/components/ui/field.tsx
+ create mode 100644 client/src/components/ui/form.tsx
+ create mode 100644 client/src/components/ui/hover-card.tsx
+ create mode 100644 client/src/components/ui/input-group.tsx
+ create mode 100644 client/src/components/ui/input-otp.tsx
+ create mode 100644 client/src/components/ui/input.tsx
+ create mode 100644 client/src/components/ui/item.tsx
+ create mode 100644 client/src/components/ui/kbd.tsx
+ create mode 100644 client/src/components/ui/label.tsx
+ create mode 100644 client/src/components/ui/menubar.tsx
+ create mode 100644 client/src/components/ui/navigation-menu.tsx
+ create mode 100644 client/src/components/ui/pagination.tsx
+ create mode 100644 client/src/components/ui/popover.tsx
+ create mode 100644 client/src/components/ui/progress.tsx
+ create mode 100644 client/src/components/ui/radio-group.tsx
+ create mode 100644 client/src/components/ui/resizable.tsx
+ create mode 100644 client/src/components/ui/scroll-area.tsx
+ create mode 100644 client/src/components/ui/select.tsx
+ create mode 100644 client/src/components/ui/separator.tsx
+ create mode 100644 client/src/components/ui/sheet.tsx
+ create mode 100644 client/src/components/ui/sidebar.tsx
+ create mode 100644 client/src/components/ui/skeleton.tsx
+ create mode 100644 client/src/components/ui/slider.tsx
+ create mode 100644 client/src/components/ui/sonner.tsx
+ create mode 100644 client/src/components/ui/spinner.tsx
+ create mode 100644 client/src/components/ui/switch.tsx
+ create mode 100644 client/src/components/ui/table.tsx
+ create mode 100644 client/src/components/ui/tabs.tsx
+ create mode 100644 client/src/components/ui/textarea.tsx
+ create mode 100644 client/src/components/ui/toast.tsx
+ create mode 100644 client/src/components/ui/toaster.tsx
+ create mode 100644 client/src/components/ui/toggle-group.tsx
+ create mode 100644 client/src/components/ui/toggle.tsx
+ create mode 100644 client/src/components/ui/tooltip.tsx
+ create mode 100644 client/src/hooks/use-mobile.tsx
+ create mode 100644 client/src/hooks/use-toast.ts
+ create mode 100644 client/src/hooks/useAuth.ts
+ create mode 100644 client/src/hooks/useHederaInit.ts
+ create mode 100644 client/src/index.css
+ create mode 100644 client/src/lib/authUtils.ts
+ create mode 100644 client/src/lib/env-loader.ts
+ create mode 100644 client/src/lib/env-setup.md
+ create mode 100644 client/src/lib/hedera.ts
+ create mode 100644 client/src/lib/quantum-signature.ts
+ create mode 100644 client/src/lib/queryClient.ts
+ create mode 100644 client/src/lib/utils.ts
+ create mode 100644 client/src/main.tsx
+ create mode 100644 client/src/pages/accounts.tsx
+ create mode 100644 client/src/pages/auth-portal.tsx
+ create mode 100644 client/src/pages/big-bang.tsx
+ create mode 100644 client/src/pages/cbdc-offline-flow.tsx
+ create mode 100644 client/src/pages/cbdc-payment-platform.tsx
+ create mode 100644 client/src/pages/cbdc-service.tsx
+ create mode 100644 client/src/pages/command-center.tsx
+ create mode 100644 client/src/pages/fraud-service.tsx
+ create mode 100644 client/src/pages/home.tsx
+ create mode 100644 client/src/pages/kyc-service.tsx
+ create mode 100644 client/src/pages/landing.tsx
+ create mode 100644 client/src/pages/monitoring.tsx
+ create mode 100644 client/src/pages/not-found.tsx
+ create mode 100644 client/src/pages/pqc-sig-service.tsx
+ create mode 100644 client/src/pages/qgrid-landing.tsx
+ create mode 100644 client/src/pages/quantum-rupee-platform.tsx
+ create mode 100644 client/src/pages/services.tsx
+ create mode 100644 client/src/pages/setup.tsx
+ create mode 100644 components.json
+ create mode 100644 drizzle.config.ts
+ create mode 100644 package-lock.json
+ create mode 100644 package.json
+ create mode 100644 postcss.config.js
+ create mode 100644 replit.md
+ create mode 100644 server/app.ts
+ create mode 100644 server/db.ts
+ create mode 100644 server/index-dev.ts
+ create mode 100644 server/index-prod.ts
+ create mode 100644 server/replitAuth.ts
+ create mode 100644 server/routes.ts
+ create mode 100644 server/storage.ts
+ create mode 100644 shared/schema.ts
+ create mode 100644 tsconfig.json
+ create mode 100644 vite-plugin-meta-images.ts
+ create mode 100644 vite.config.ts
+Enumerating objects: 219, done.
+Counting objects: 100% (219/219), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (217/217), done.
+Writing objects: 100% (219/219), 9.16 MiB | 6.16 MiB/s, done.
+Total 219 (delta 14), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (14/14), done.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:      (?) This repository does not have Secret Scanning enabled, but is eligible. Enable Secret Scanning to view and manage detected secrets.
+remote:      Visit the repository settings page, https://github.com/Taurus-Ai-Corp/Q-GRID/settings/security_analysis
+remote:     
+remote:     
+remote:       —— GitHub Personal Access Token ——————————————————————
+remote:        locations:
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:46
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:266
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:272
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:276
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:280
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/Taurus-Ai-Corp/Q-GRID/security/secret-scanning/unblock-secret/363ua6IuWpGiCHWSIAaGSh3uGGO
+remote:     
+remote:     
+remote:       —— Figma Personal Access Token ———————————————————————
+remote:        locations:
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:65
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:267
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:283
+remote:          - commit: ff4b45f078a50cec8a2d8204250e77bf427e15d7
+remote:            path: attached_assets/CREDENTIAL_DEPENDENCY_IMPACT_ASSESSMENT_1763947736234.md:290
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/Taurus-Ai-Corp/Q-GRID/security/secret-scanning/unblock-secret/363ua8XZLOuxyGo66ZQTqdRZRVA
+remote:     
+remote: 
+remote: 
+To https://github.com/Taurus-Ai-Corp/Q-GRID.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/Taurus-Ai-Corp/Q-GRID.git'
