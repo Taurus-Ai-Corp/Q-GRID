@@ -3,15 +3,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
-import { 
-  insertCBDCTransactionSchema, 
-  insertX402PaymentSchema, 
+import {
+  insertCBDCTransactionSchema,
+  insertX402PaymentSchema,
   insertOfflineBatchSchema,
   insertKYCVerificationSchema,
   insertFraudAnalysisSchema,
   insertCBDCWalletSchema
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { getAllAgents, executeAgent, getAgentNames, hasAgent, agentRegistry, getAgentStats } from "./agents";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
@@ -387,6 +388,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Transaction retrieval error:", error);
       res.status(500).json({ error: "Failed to retrieve transactions" });
+    }
+  });
+
+  // ============================================
+  // HEDERA AGENT ORCHESTRATION API ROUTES
+  // ============================================
+
+  // Get all agents (public)
+  app.get("/api/agents", async (req, res) => {
+    try {
+      const agents = getAllAgents();
+      res.json({
+        success: true,
+        ...agents,
+      });
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      res.status(500).json({ error: "Failed to fetch agents" });
+    }
+  });
+
+  // Get agent stats (public)
+  app.get("/api/agents/stats", async (req, res) => {
+    try {
+      const stats = getAgentStats();
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error) {
+      console.error("Error fetching agent stats:", error);
+      res.status(500).json({ error: "Failed to fetch agent stats" });
+    }
+  });
+
+  // Get agent names (public)
+  app.get("/api/agents/names", async (req, res) => {
+    try {
+      const names = getAgentNames();
+      res.json({
+        success: true,
+        agents: names,
+        count: names.length,
+      });
+    } catch (error) {
+      console.error("Error fetching agent names:", error);
+      res.status(500).json({ error: "Failed to fetch agent names" });
+    }
+  });
+
+  // Get specific agent info (public)
+  app.get("/api/agents/:agentName", async (req, res) => {
+    try {
+      const { agentName } = req.params;
+      const agent = agentRegistry.get(agentName);
+
+      if (!agent) {
+        return res.status(404).json({ error: `Agent not found: ${agentName}` });
+      }
+
+      const isSubAgent = 'parentAgent' in agent;
+
+      res.json({
+        success: true,
+        agent: {
+          name: agent.config.name,
+          description: agent.config.description,
+          version: agent.config.version,
+          capabilities: agent.getCapabilities(),
+          pricing: agent.config.pricing,
+          status: agent.status,
+          type: isSubAgent ? 'subagent' : 'main',
+          ...(isSubAgent && {
+            parentAgent: (agent as any).parentAgent,
+            specialization: (agent as any).specialization,
+          }),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching agent:", error);
+      res.status(500).json({ error: "Failed to fetch agent" });
+    }
+  });
+
+  // Execute agent (protected)
+  app.post("/api/agents/:agentName/execute", isAuthenticated, async (req: any, res) => {
+    try {
+      const { agentName } = req.params;
+      const { input, hederaAccountId, network } = req.body;
+
+      if (!hasAgent(agentName)) {
+        return res.status(404).json({ error: `Agent not found: ${agentName}` });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const sessionId = `session_${randomUUID().slice(0, 12)}`;
+
+      const result = await executeAgent(agentName, input || {}, {
+        sessionId,
+        userId,
+        hederaAccountId,
+        network: network || 'testnet',
+      });
+
+      // Store execution record
+      const executionId = `exec_${randomUUID().slice(0, 12)}`;
+
+      res.json({
+        success: result.success,
+        executionId,
+        agentName,
+        result,
+        context: {
+          sessionId,
+          userId,
+          network: network || 'testnet',
+          executedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Agent execution error:", error);
+      res.status(500).json({ error: "Agent execution failed" });
+    }
+  });
+
+  // Execute workflow (protected)
+  app.post("/api/agents/workflow/execute", isAuthenticated, async (req: any, res) => {
+    try {
+      const { workflow, hederaAccountId, network } = req.body;
+
+      if (!workflow || !Array.isArray(workflow) || workflow.length === 0) {
+        return res.status(400).json({ error: "Workflow must be a non-empty array of steps" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const sessionId = `session_${randomUUID().slice(0, 12)}`;
+      const workflowId = `wf_${randomUUID().slice(0, 12)}`;
+
+      const context = {
+        sessionId,
+        userId,
+        hederaAccountId,
+        network: network || 'testnet',
+      };
+
+      // Execute coordinator agent with workflow
+      const coordinatorResult = await executeAgent('coordinator-agent', {
+        action: 'execute-workflow',
+        workflow,
+      }, context);
+
+      res.json({
+        success: coordinatorResult.success,
+        workflowId,
+        result: coordinatorResult,
+        context: {
+          sessionId,
+          userId,
+          network: network || 'testnet',
+          executedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Workflow execution error:", error);
+      res.status(500).json({ error: "Workflow execution failed" });
+    }
+  });
+
+  // Plan task (protected)
+  app.post("/api/agents/plan", isAuthenticated, async (req: any, res) => {
+    try {
+      const { task, constraints } = req.body;
+
+      if (!task) {
+        return res.status(400).json({ error: "Task description is required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const sessionId = `session_${randomUUID().slice(0, 12)}`;
+
+      const result = await executeAgent('task-planner', {
+        task,
+        constraints,
+      }, {
+        sessionId,
+        userId,
+        network: 'testnet',
+      });
+
+      res.json({
+        success: result.success,
+        plan: result.data,
+        executionTime: result.executionTime,
+      });
+    } catch (error) {
+      console.error("Task planning error:", error);
+      res.status(500).json({ error: "Task planning failed" });
+    }
+  });
+
+  // Parallel execute multiple agents (protected)
+  app.post("/api/agents/parallel", isAuthenticated, async (req: any, res) => {
+    try {
+      const { agentCalls, hederaAccountId, network } = req.body;
+
+      if (!agentCalls || !Array.isArray(agentCalls) || agentCalls.length === 0) {
+        return res.status(400).json({ error: "agentCalls must be a non-empty array" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const sessionId = `session_${randomUUID().slice(0, 12)}`;
+
+      const context = {
+        sessionId,
+        userId,
+        hederaAccountId,
+        network: network || 'testnet',
+      };
+
+      const result = await executeAgent('coordinator-agent', {
+        action: 'parallel-execute',
+        agentCalls,
+      }, context);
+
+      res.json({
+        success: result.success,
+        result: result.data,
+        executionTime: result.executionTime,
+      });
+    } catch (error) {
+      console.error("Parallel execution error:", error);
+      res.status(500).json({ error: "Parallel execution failed" });
     }
   });
 

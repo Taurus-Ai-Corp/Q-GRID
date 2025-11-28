@@ -23,6 +23,7 @@ import CBDCPaymentPlatform from "@/pages/cbdc-payment-platform";
 import FraudService from "@/pages/fraud-service";
 import PQCSigService from "@/pages/pqc-sig-service";
 import QuantumRupeePlatform from "@/pages/quantum-rupee-platform";
+import AgentHub from "@/pages/agent-hub";
 
 function Router() {
   return (
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/app/cbdc-payment-platform" component={CBDCPaymentPlatform} />
       <Route path="/app/fraud-service" component={FraudService} />
       <Route path="/app/pqc-sig-service" component={PQCSigService} />
+      <Route path="/app/agent-hub" component={AgentHub} />
       <Route path="/app/setup" component={Setup} />
       <Route path="/app/command-center" component={CommandCenter} />
       <Route path="/app/accounts" component={Accounts} />
