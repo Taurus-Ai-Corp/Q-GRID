@@ -1,6 +1,6 @@
 // Reference: blueprint:javascript_log_in_with_replit
-import { 
-  type User, 
+import {
+  type User,
   type UpsertUser,
   type CBDCWallet,
   type InsertCBDCWallet,
@@ -14,6 +14,10 @@ import {
   type InsertKYCVerification,
   type FraudAnalysis,
   type InsertFraudAnalysis,
+  type AgentExecution,
+  type InsertAgentExecution,
+  type WorkflowExecution,
+  type InsertWorkflowExecution,
   users,
   cbdcWallets,
   cbdcTransactions,
@@ -21,9 +25,11 @@ import {
   x402Payments,
   kycVerifications,
   fraudAnalyses,
+  agentExecutions,
+  workflowExecutions,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, or } from "drizzle-orm";
+import { eq, or, gt, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -67,6 +73,21 @@ export interface IStorage {
   createFraudAnalysis(analysis: InsertFraudAnalysis): Promise<FraudAnalysis>;
   getFraudAnalysis(id: string): Promise<FraudAnalysis | undefined>;
   getFraudAnalysisByAnalysisId(analysisId: string): Promise<FraudAnalysis | undefined>;
+
+  // Agent Execution operations
+  createAgentExecution(execution: InsertAgentExecution): Promise<AgentExecution>;
+  getAgentExecution(id: string): Promise<AgentExecution | undefined>;
+  getAgentExecutionByExecutionId(executionId: string): Promise<AgentExecution | undefined>;
+  updateAgentExecutionStatus(executionId: string, status: string, success: boolean, output?: any, error?: string): Promise<AgentExecution>;
+  getAgentExecutionsByUserId(userId: string): Promise<AgentExecution[]>;
+  getAgentExecutionsByAgent(agentName: string): Promise<AgentExecution[]>;
+
+  // Workflow Execution operations
+  createWorkflowExecution(workflow: InsertWorkflowExecution): Promise<WorkflowExecution>;
+  getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined>;
+  getWorkflowExecutionByWorkflowId(workflowId: string): Promise<WorkflowExecution | undefined>;
+  updateWorkflowExecutionStatus(workflowId: string, status: string, success: boolean, steps?: any, error?: string): Promise<WorkflowExecution>;
+  getWorkflowExecutionsByUserId(userId: string): Promise<WorkflowExecution[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -293,6 +314,41 @@ export class DatabaseStorage implements IStorage {
   async getFraudAnalysisByAnalysisId(analysisId: string): Promise<FraudAnalysis | undefined> {
     const [analysis] = await db.select().from(fraudAnalyses).where(eq(fraudAnalyses.analysisId, analysisId));
     return analysis;
+  }
+
+  // Additional fraud analysis query methods
+
+  async getRecentTransactions(userId: string, hoursAgo: number): Promise<CBDCTransaction[]> {
+    const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+    return db
+      .select()
+      .from(cbdcTransactions)
+      .where(
+        and(
+          eq(cbdcTransactions.senderId, userId),
+          gt(cbdcTransactions.createdAt, cutoffTime)
+        )
+      )
+      .orderBy(desc(cbdcTransactions.createdAt));
+  }
+
+  async getUserTransactionStats(userId: string): Promise<{
+    totalTransactions: number;
+    avgAmount: string;
+    uniqueRecipients: number;
+  }> {
+    const transactions = await this.getTransactionsByUserId(userId);
+
+    const total = transactions.length;
+    const sum = transactions.reduce((acc, tx) => acc + parseFloat(tx.amount), 0);
+    const avg = total > 0 ? (sum / total).toFixed(8) : "0";
+    const uniqueRecipients = new Set(transactions.map(tx => tx.recipientId)).size;
+
+    return {
+      totalTransactions: total,
+      avgAmount: avg,
+      uniqueRecipients,
+    };
   }
 }
 

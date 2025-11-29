@@ -13,6 +13,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { getAllAgents, executeAgent, getAgentNames, hasAgent, agentRegistry, getAgentStats } from "./agents";
+import { analyzeFraudPatterns } from "./fraud-detector";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
@@ -263,49 +264,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Fraud Detection Analysis with X402 Payment (protected)
+  // Fraud Detection Analysis with Real Pattern Analysis (protected)
   app.post("/api/fraud/analyze", isAuthenticated, async (req: any, res) => {
     try {
-      const { fileHash, analysisType } = req.body;
+      const { userId, transactionId } = req.body;
 
-      if (!fileHash || !analysisType) {
-        return res.status(400).json({ error: "Missing required fields" });
+      if (!userId && !transactionId) {
+        return res.status(400).json({ error: "userId or transactionId required" });
       }
 
+      // Get user ID from transaction if provided
+      let targetUserId = userId;
+      if (transactionId) {
+        const transaction = await storage.getCBDCTransactionByTxId(transactionId);
+        if (!transaction) {
+          return res.status(404).json({ error: "Transaction not found" });
+        }
+        targetUserId = transaction.senderId;
+      }
+
+      // Get data for analysis
+      const transactions = await storage.getTransactionsByUserId(targetUserId);
+      const recentTxs = await storage.getRecentTransactions(targetUserId, 24);
+      const wallet = await storage.getCBDCWalletByUserId(targetUserId);
+
+      // Run fraud detection analysis
+      const fraudAnalysis = await analyzeFraudPatterns({
+        userId: targetUserId,
+        transactionId,
+        transactions,
+        recentTransactions: recentTxs,
+        wallet,
+      });
+
+      // Create analysis ID
       const analysisId = `fraud_${randomUUID().slice(0, 12)}`;
 
-      // Process X402 payment for fraud analysis ($0.01 = ₹0.80)
+      // Store analysis
+      const analysis = await storage.createFraudAnalysis({
+        analysisId,
+        fileHash: transactionId || `user_${targetUserId}`,
+        analysisType: "behavioral",
+        deepfakeScore: "0",
+        voiceSynthesisScore: "0",
+        behavioralScore: (fraudAnalysis.riskScore / 100).toString(),
+        overallRisk: fraudAnalysis.overallRisk,
+        confidence: fraudAnalysis.confidence.toString(),
+        x402PaymentHash: undefined,
+        status: "completed",
+      });
+
+      // Process X402 payment for fraud analysis
       const paymentId = `x402_fraud_${randomUUID().slice(0, 12)}`;
+      const mockTxHash = `0x${randomUUID().replace(/-/g, "").slice(0, 64)}`;
 
       const payment = await storage.createX402Payment({
         paymentId,
-        amount: "0.01", // $0.01 USDC
+        amount: "0.01",
         currency: "USDC",
-        status: "processing",
-        recipientAddress: "0.0.456789", // Fraud detection service wallet
+        status: "completed",
+        recipientAddress: "0.0.456789",
+        transactionHash: mockTxHash,
         metadata: {
           paymentType: "fraud_analysis",
-          analysisType,
-          fileHash,
+          userId: targetUserId,
+          transactionId,
+          riskLevel: fraudAnalysis.overallRisk,
         },
-      });
-
-      // Simulate payment completion
-      const mockTxHash = `0x${randomUUID().replace(/-/g, "").slice(0, 64)}`;
-      await storage.updateX402PaymentStatus(paymentId, "completed", mockTxHash);
-
-      // Create fraud analysis with mock scores
-      const analysis = await storage.createFraudAnalysis({
-        analysisId,
-        fileHash,
-        analysisType,
-        deepfakeScore: "0.15", // 15% deepfake probability
-        voiceSynthesisScore: "0.08",
-        behavioralScore: "0.22",
-        overallRisk: "LOW",
-        confidence: "0.9973",
-        x402PaymentHash: mockTxHash,
-        status: "completed",
       });
 
       res.status(201).json({
@@ -313,12 +338,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         analysis,
         payment,
         fraudDetection: {
+          ...fraudAnalysis,
           analysisId,
-          deepfakeScore: 0.15,
-          voiceSynthesisScore: 0.08,
-          behavioralScore: 0.22,
-          overallRisk: "LOW",
-          confidence: 0.9973,
+          userId: targetUserId,
+          transactionId,
           processingTime: "1.25 seconds",
           settlementTime: "2 seconds",
         },

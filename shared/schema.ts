@@ -108,6 +108,55 @@ export const fraudAnalyses = pgTable("fraud_analyses", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Agent Execution Tracking Table
+export const agentExecutions = pgTable("agent_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  executionId: text("execution_id").notNull().unique(),
+  agentName: text("agent_name").notNull(),
+  sessionId: text("session_id").notNull(),
+  userId: varchar("user_id"),
+  hederaAccountId: text("hedera_account_id"),
+  network: text("network").notNull().default("testnet"), // 'testnet' | 'mainnet'
+  input: jsonb("input"),
+  output: jsonb("output"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'running' | 'completed' | 'error'
+  success: boolean("success"),
+  executionTime: numeric("execution_time", { precision: 10, scale: 2 }),
+  error: text("error"),
+  cost: numeric("cost", { precision: 20, scale: 8 }),
+  transactionHash: text("transaction_hash"),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("IDX_agent_executions_user").on(table.userId),
+  index("IDX_agent_executions_agent").on(table.agentName),
+  index("IDX_agent_executions_session").on(table.sessionId),
+  index("IDX_agent_executions_created").on(table.createdAt),
+]);
+
+// Agent Workflow Executions
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: text("workflow_id").notNull().unique(),
+  userId: varchar("user_id"),
+  sessionId: text("session_id").notNull(),
+  hederaAccountId: text("hedera_account_id"),
+  network: text("network").notNull().default("testnet"),
+  workflow: jsonb("workflow").notNull(), // Array of workflow steps
+  executionSteps: jsonb("execution_steps"), // Array of execution results for each step
+  status: text("status").notNull().default("pending"), // 'pending' | 'running' | 'completed' | 'error'
+  success: boolean("success"),
+  executionTime: numeric("execution_time", { precision: 10, scale: 2 }),
+  error: text("error"),
+  totalCost: numeric("total_cost", { precision: 20, scale: 8 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("IDX_workflow_executions_user").on(table.userId),
+  index("IDX_workflow_executions_session").on(table.sessionId),
+  index("IDX_workflow_executions_created").on(table.createdAt),
+]);
+
 // Insert schemas
 export const upsertUserSchema = createInsertSchema(users);
 
@@ -145,6 +194,18 @@ export const insertFraudAnalysisSchema = createInsertSchema(fraudAnalyses).omit(
   createdAt: true,
 });
 
+export const insertAgentExecutionSchema = createInsertSchema(agentExecutions).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
@@ -166,3 +227,9 @@ export type InsertKYCVerification = z.infer<typeof insertKYCVerificationSchema>;
 
 export type FraudAnalysis = typeof fraudAnalyses.$inferSelect;
 export type InsertFraudAnalysis = z.infer<typeof insertFraudAnalysisSchema>;
+
+export type AgentExecution = typeof agentExecutions.$inferSelect;
+export type InsertAgentExecution = z.infer<typeof insertAgentExecutionSchema>;
+
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;

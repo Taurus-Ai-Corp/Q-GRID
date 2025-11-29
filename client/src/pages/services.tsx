@@ -31,7 +31,7 @@ export default function Services() {
       revenue: "₹281 Cr (Y5)",
       users: "50M+",
       subdomain: "kyc.quantumrupee.gov.in",
-      launchUrl: "/kyc-service",
+      launchUrl: "/app/kyc-service",
       color: "from-blue-600 to-blue-900"
     },
     {
@@ -56,7 +56,7 @@ export default function Services() {
       revenue: "₹200 Cr (Y5)",
       users: "600M rural",
       subdomain: "cbdc.quantumrupee.gov.in",
-      launchUrl: "/cbdc-service",
+      launchUrl: "/app/cbdc-service",
       color: "from-yellow-600 to-orange-900"
     },
     {
@@ -81,7 +81,7 @@ export default function Services() {
       revenue: "₹500 Cr (Y5)",
       users: "500+ banks",
       subdomain: "fraud.quantumrupee.gov.in",
-      launchUrl: "/fraud-service",
+      launchUrl: "/app/fraud-service",
       color: "from-red-600 to-red-900"
     },
     {
@@ -106,7 +106,7 @@ export default function Services() {
       revenue: "₹164 Cr (Y5)",
       users: "100+ enterprises",
       subdomain: "pqc.quantumrupee.gov.in",
-      launchUrl: "/pqc-sig-service",
+      launchUrl: "/app/pqc-sig-service",
       color: "from-purple-600 to-purple-900"
     }
   ];
