@@ -57,3 +57,4 @@ attached_assets/*.ppt
 *.log
 logs/
 .DS_Store
+coverage/
