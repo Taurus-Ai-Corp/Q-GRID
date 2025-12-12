@@ -3,11 +3,13 @@
  * Real-time transaction pattern analysis with multi-factor risk scoring
  *
  * Risk Factors:
- * - Velocity Analysis (25% weight): Transaction frequency patterns
- * - Amount Anomaly (30% weight): Unusual transaction amounts
+ * - Velocity Analysis (20% weight): Transaction frequency patterns
+ * - Amount Anomaly (25% weight): Unusual transaction amounts
  * - Time Pattern (15% weight): Suspicious timing patterns
- * - Balance Behavior (20% weight): Account draining patterns
+ * - Balance Behavior (15% weight): Account draining patterns
  * - Recipient Pattern (10% weight): New recipient patterns
+ * - Geographic Risk (10% weight): High-risk jurisdiction analysis
+ * - Circular Flow Detection (5% weight): Money laundering patterns
  */
 
 import { CBDCTransaction, CBDCWallet } from '@shared/schema';
@@ -26,6 +28,28 @@ export interface RiskFactor {
   score: number; // 0-100
   description: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  details?: Record<string, unknown>;
+}
+
+export interface CircularFlowResult {
+  detected: boolean;
+  score: number;
+  cycles: Array<{
+    path: string[];
+    amount: number;
+    timeSpan: number; // milliseconds
+  }>;
+}
+
+export interface GeographicRiskResult {
+  score: number;
+  highRiskCountries: string[];
+  jurisdictions: Array<{
+    country: string;
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    transactionCount: number;
+    totalAmount: number;
+  }>;
 }
 
 export interface FraudAnalysisResult {
@@ -37,7 +61,11 @@ export interface FraudAnalysisResult {
   timePatternScore: number;
   balanceBehaviorScore: number;
   recipientPatternScore: number;
+  geographicRiskScore: number;
+  circularFlowScore: number;
   riskFactors: RiskFactor[];
+  circularFlows?: CircularFlowResult;
+  geographicRisk?: GeographicRiskResult;
   metadata: {
     transactionCount24h: number;
     transactionCount7d: number;
@@ -50,6 +78,34 @@ export interface FraudAnalysisResult {
     receiverCountries: string[];
   };
 }
+
+// FATF High-Risk Jurisdictions and monitored countries
+// Updated based on FATF gray list and black list 2024-2025
+const HIGH_RISK_JURISDICTIONS: Record<string, { level: 'HIGH' | 'CRITICAL'; reason: string }> = {
+  'KP': { level: 'CRITICAL', reason: 'FATF Black List - North Korea' },
+  'IR': { level: 'CRITICAL', reason: 'FATF Black List - Iran' },
+  'MM': { level: 'CRITICAL', reason: 'FATF Black List - Myanmar' },
+  'SY': { level: 'HIGH', reason: 'Sanctions - Syria' },
+  'YE': { level: 'HIGH', reason: 'Conflict Zone - Yemen' },
+  'VE': { level: 'HIGH', reason: 'Sanctions risk - Venezuela' },
+  'BY': { level: 'HIGH', reason: 'Sanctions risk - Belarus' },
+  'RU': { level: 'HIGH', reason: 'Sanctions risk - Russia' },
+  'CU': { level: 'HIGH', reason: 'Sanctions - Cuba' },
+};
+
+// FATF Gray List (Increased Monitoring) - partial list
+const MEDIUM_RISK_JURISDICTIONS: Record<string, string> = {
+  'PK': 'FATF Gray List - Pakistan',
+  'NG': 'FATF Gray List - Nigeria',
+  'TZ': 'FATF Gray List - Tanzania',
+  'VN': 'FATF Gray List - Vietnam',
+  'JM': 'FATF Gray List - Jamaica',
+  'PA': 'FATF Gray List - Panama',
+  'PH': 'FATF Gray List - Philippines',
+  'ZA': 'FATF Gray List - South Africa',
+  'TR': 'FATF Gray List - Turkey',
+  'AE': 'FATF Gray List - UAE',
+};
 
 /**
  * Calculate standard deviation for amount anomaly detection
@@ -240,22 +296,246 @@ function analyzeRecipientPattern(
 }
 
 /**
- * Generate mock geographic data for demonstration
+ * Extract country code from transaction metadata or recipient ID
+ * In production, this would integrate with a geolocation service or KYC data
  */
-function generateMockCountries(): string[] {
-  const countries = [
-    'US', 'UK', 'IN', 'CN', 'JP', 'DE', 'FR', 'BR', 'MX', 'SG',
-    'AE', 'HK', 'AU', 'CA', 'ZA'
-  ];
+function extractCountryFromTransaction(tx: CBDCTransaction): string | null {
+  const metadata = tx.metadata as Record<string, unknown> | null;
 
-  // Return 2-4 random countries
-  const count = Math.floor(Math.random() * 3) + 2;
-  const selected = [];
-  for (let i = 0; i < count; i++) {
-    selected.push(countries[Math.floor(Math.random() * countries.length)]);
+  // Check metadata for country information
+  if (metadata) {
+    if (typeof metadata.recipientCountry === 'string') {
+      return metadata.recipientCountry.toUpperCase().slice(0, 2);
+    }
+    if (typeof metadata.country === 'string') {
+      return metadata.country.toUpperCase().slice(0, 2);
+    }
+    if (typeof metadata.jurisdiction === 'string') {
+      return metadata.jurisdiction.toUpperCase().slice(0, 2);
+    }
   }
 
-  return [...new Set(selected)];
+  // Try to extract from recipient address format (e.g., 0.0.12345_US)
+  if (tx.recipientId && tx.recipientId.includes('_')) {
+    const parts = tx.recipientId.split('_');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.length === 2) {
+      return lastPart.toUpperCase();
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Geographic Risk Analysis
+ * Analyzes transaction jurisdictions against FATF risk lists
+ */
+function analyzeGeographicRisk(transactions: CBDCTransaction[]): GeographicRiskResult {
+  const jurisdictionStats: Map<string, { count: number; amount: number }> = new Map();
+  const highRiskCountries: string[] = [];
+
+  transactions.forEach(tx => {
+    const country = extractCountryFromTransaction(tx);
+    if (country) {
+      const existing = jurisdictionStats.get(country) || { count: 0, amount: 0 };
+      jurisdictionStats.set(country, {
+        count: existing.count + 1,
+        amount: existing.amount + parseFloat(tx.amount),
+      });
+
+      if (HIGH_RISK_JURISDICTIONS[country] && !highRiskCountries.includes(country)) {
+        highRiskCountries.push(country);
+      }
+    }
+  });
+
+  // Build jurisdiction details
+  const jurisdictions: GeographicRiskResult['jurisdictions'] = [];
+  jurisdictionStats.forEach((stats, country) => {
+    let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
+
+    if (HIGH_RISK_JURISDICTIONS[country]) {
+      riskLevel = HIGH_RISK_JURISDICTIONS[country].level;
+    } else if (MEDIUM_RISK_JURISDICTIONS[country]) {
+      riskLevel = 'MEDIUM';
+    }
+
+    jurisdictions.push({
+      country,
+      riskLevel,
+      transactionCount: stats.count,
+      totalAmount: stats.amount,
+    });
+  });
+
+  // Calculate geographic risk score
+  let score = 0;
+  let totalWeight = 0;
+
+  jurisdictions.forEach(j => {
+    const weight = j.transactionCount;
+    totalWeight += weight;
+
+    switch (j.riskLevel) {
+      case 'CRITICAL':
+        score += weight * 100;
+        break;
+      case 'HIGH':
+        score += weight * 75;
+        break;
+      case 'MEDIUM':
+        score += weight * 40;
+        break;
+      case 'LOW':
+        score += weight * 0;
+        break;
+    }
+  });
+
+  const finalScore = totalWeight > 0 ? Math.round(score / totalWeight) : 0;
+
+  return {
+    score: finalScore,
+    highRiskCountries,
+    jurisdictions: jurisdictions.sort((a, b) => {
+      const riskOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+      return riskOrder[b.riskLevel] - riskOrder[a.riskLevel];
+    }),
+  };
+}
+
+/**
+ * Circular Flow Detection
+ * Detects potential money laundering patterns where funds return to the sender
+ * Uses graph analysis to find cycles in transaction flows
+ */
+function analyzeCircularFlows(
+  transactions: CBDCTransaction[],
+  userId: string
+): CircularFlowResult {
+  // Build a directed graph of transactions
+  const graph: Map<string, Array<{ to: string; amount: number; timestamp: number; txId: string }>> = new Map();
+
+  transactions.forEach(tx => {
+    const sender = tx.senderId;
+    const recipient = tx.recipientId;
+
+    if (!graph.has(sender)) {
+      graph.set(sender, []);
+    }
+
+    graph.get(sender)!.push({
+      to: recipient,
+      amount: parseFloat(tx.amount),
+      timestamp: new Date(tx.createdAt).getTime(),
+      txId: tx.transactionId,
+    });
+  });
+
+  const cycles: CircularFlowResult['cycles'] = [];
+
+  // DFS to find cycles starting from the user
+  function findCycles(
+    current: string,
+    path: string[],
+    amounts: number[],
+    timestamps: number[],
+    visited: Set<string>
+  ) {
+    if (path.length > 1 && current === userId) {
+      // Found a cycle back to the user
+      const totalAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+      const timeSpan = Math.max(...timestamps) - Math.min(...timestamps);
+
+      cycles.push({
+        path: [...path],
+        amount: totalAmount,
+        timeSpan,
+      });
+      return;
+    }
+
+    if (path.length > 5 || visited.has(current)) {
+      // Limit depth and prevent infinite loops
+      return;
+    }
+
+    visited.add(current);
+    const edges = graph.get(current) || [];
+
+    for (const edge of edges) {
+      findCycles(
+        edge.to,
+        [...path, edge.to],
+        [...amounts, edge.amount],
+        [...timestamps, edge.timestamp],
+        new Set(visited)
+      );
+    }
+  }
+
+  // Start DFS from userId
+  const userEdges = graph.get(userId) || [];
+  for (const edge of userEdges) {
+    findCycles(
+      edge.to,
+      [userId, edge.to],
+      [edge.amount],
+      [edge.timestamp],
+      new Set([userId])
+    );
+  }
+
+  // Calculate score based on cycles found
+  let score = 0;
+  if (cycles.length > 0) {
+    // Base score for having any cycles
+    score = 40;
+
+    // Additional score based on cycle characteristics
+    cycles.forEach(cycle => {
+      // Quick cycles (< 24 hours) are more suspicious
+      if (cycle.timeSpan < 24 * 60 * 60 * 1000) {
+        score += 20;
+      }
+      // Multiple cycles compound suspicion
+      score += 10;
+      // Large amounts are more suspicious
+      if (cycle.amount > 10000) {
+        score += 15;
+      }
+    });
+
+    score = Math.min(100, score);
+  }
+
+  return {
+    detected: cycles.length > 0,
+    score,
+    cycles: cycles.slice(0, 5), // Return top 5 cycles
+  };
+}
+
+/**
+ * Get country codes from transactions for metadata
+ */
+function getCountriesFromTransactions(transactions: CBDCTransaction[]): string[] {
+  const countries = new Set<string>();
+
+  transactions.forEach(tx => {
+    const country = extractCountryFromTransaction(tx);
+    if (country) {
+      countries.add(country);
+    }
+  });
+
+  // If no countries extracted, return common defaults for display
+  if (countries.size === 0) {
+    return ['US']; // Default jurisdiction
+  }
+
+  return Array.from(countries);
 }
 
 /**
@@ -267,6 +547,7 @@ export async function analyzeFraudPatterns(
   const transactions = input.transactions || [];
   const recentTransactions = input.recentTransactions || [];
   const wallet = input.wallet || null;
+  const userId = input.userId || 'unknown';
 
   // Calculate individual risk scores
   const velocityScore = analyzeVelocity(recentTransactions);
@@ -275,13 +556,24 @@ export async function analyzeFraudPatterns(
   const balanceBehaviorScore = analyzeBalanceBehavior(recentTransactions, wallet);
   const recipientPatternScore = analyzeRecipientPattern(recentTransactions, transactions);
 
-  // Calculate weighted overall risk score
+  // New: Geographic risk analysis
+  const geographicRisk = analyzeGeographicRisk(transactions);
+  const geographicRiskScore = geographicRisk.score;
+
+  // New: Circular flow detection (money laundering patterns)
+  const circularFlows = analyzeCircularFlows(transactions, userId);
+  const circularFlowScore = circularFlows.score;
+
+  // Calculate weighted overall risk score with new factors
+  // Updated weights: Velocity (20%), Amount (25%), Time (15%), Balance (15%), Recipient (10%), Geographic (10%), Circular (5%)
   const overallRisk =
-    (velocityScore * 0.25) +
-    (amountAnomalyScore * 0.30) +
+    (velocityScore * 0.20) +
+    (amountAnomalyScore * 0.25) +
     (timePatternScore * 0.15) +
-    (balanceBehaviorScore * 0.20) +
-    (recipientPatternScore * 0.10);
+    (balanceBehaviorScore * 0.15) +
+    (recipientPatternScore * 0.10) +
+    (geographicRiskScore * 0.10) +
+    (circularFlowScore * 0.05);
 
   // Determine risk level
   let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -298,6 +590,8 @@ export async function analyzeFraudPatterns(
   if (transactions.length < 5) confidence -= 0.1;
   if (recentTransactions.length < 2) confidence -= 0.1;
   if (!wallet) confidence -= 0.1;
+  // Boost confidence if we have geographic data
+  if (geographicRisk.jurisdictions.length > 0) confidence += 0.05;
   confidence = Math.max(0.3, Math.min(1, confidence));
 
   // Build risk factors array
@@ -308,7 +602,7 @@ export async function analyzeFraudPatterns(
       factor: 'High Transaction Velocity',
       score: velocityScore,
       description: `${recentTransactions.length} transactions detected. Threshold exceeded.`,
-      severity: velocityScore > 70 ? 'HIGH' : 'MEDIUM'
+      severity: velocityScore > 70 ? 'HIGH' : 'MEDIUM',
     });
   }
 
@@ -317,7 +611,7 @@ export async function analyzeFraudPatterns(
       factor: 'Amount Anomaly',
       score: amountAnomalyScore,
       description: 'Transaction amounts deviate significantly from historical patterns',
-      severity: amountAnomalyScore > 70 ? 'HIGH' : 'MEDIUM'
+      severity: amountAnomalyScore > 70 ? 'HIGH' : 'MEDIUM',
     });
   }
 
@@ -326,7 +620,7 @@ export async function analyzeFraudPatterns(
       factor: 'Suspicious Timing',
       score: timePatternScore,
       description: 'Transactions at unusual hours or rapid succession',
-      severity: timePatternScore > 70 ? 'HIGH' : 'MEDIUM'
+      severity: timePatternScore > 70 ? 'HIGH' : 'MEDIUM',
     });
   }
 
@@ -335,7 +629,7 @@ export async function analyzeFraudPatterns(
       factor: 'Account Draining',
       score: balanceBehaviorScore,
       description: 'Large transaction amounts relative to wallet balance',
-      severity: balanceBehaviorScore > 70 ? 'HIGH' : 'MEDIUM'
+      severity: balanceBehaviorScore > 70 ? 'HIGH' : 'MEDIUM',
     });
   }
 
@@ -343,8 +637,42 @@ export async function analyzeFraudPatterns(
     riskFactors.push({
       factor: 'Unusual Recipient Pattern',
       score: recipientPatternScore,
-      description: 'Multiple new recipients or circular transaction patterns',
-      severity: recipientPatternScore > 70 ? 'HIGH' : 'MEDIUM'
+      description: 'Multiple new recipients in short time period',
+      severity: recipientPatternScore > 70 ? 'HIGH' : 'MEDIUM',
+    });
+  }
+
+  // New: Geographic risk factor
+  if (geographicRiskScore > 30) {
+    riskFactors.push({
+      factor: 'High-Risk Jurisdiction',
+      score: geographicRiskScore,
+      description: `Transactions involving ${geographicRisk.highRiskCountries.length > 0
+        ? `FATF-listed countries: ${geographicRisk.highRiskCountries.join(', ')}`
+        : 'elevated-risk jurisdictions'}`,
+      severity: geographicRiskScore > 70 ? 'HIGH' : 'MEDIUM',
+      details: {
+        highRiskCountries: geographicRisk.highRiskCountries,
+        jurisdictionCount: geographicRisk.jurisdictions.length,
+      },
+    });
+  }
+
+  // New: Circular flow risk factor
+  if (circularFlowScore > 30) {
+    riskFactors.push({
+      factor: 'Circular Transaction Pattern',
+      score: circularFlowScore,
+      description: `Detected ${circularFlows.cycles.length} potential money laundering cycle(s)`,
+      severity: circularFlowScore > 70 ? 'HIGH' : 'MEDIUM',
+      details: {
+        cycleCount: circularFlows.cycles.length,
+        shortestCycle: circularFlows.cycles.length > 0
+          ? circularFlows.cycles.reduce((min, c) =>
+              c.path.length < min.path.length ? c : min
+            ).path.length
+          : 0,
+      },
     });
   }
 
@@ -375,7 +703,11 @@ export async function analyzeFraudPatterns(
     timePatternScore: Math.round(timePatternScore),
     balanceBehaviorScore: Math.round(balanceBehaviorScore),
     recipientPatternScore: Math.round(recipientPatternScore),
+    geographicRiskScore: Math.round(geographicRiskScore),
+    circularFlowScore: Math.round(circularFlowScore),
     riskFactors,
+    circularFlows: circularFlows.detected ? circularFlows : undefined,
+    geographicRisk: geographicRisk.jurisdictions.length > 0 ? geographicRisk : undefined,
     metadata: {
       transactionCount24h: txIn24h,
       transactionCount7d: transactions.length,
@@ -385,8 +717,8 @@ export async function analyzeFraudPatterns(
       uniqueRecipients24h: uniqueRecipientsRecent,
       walletBalance: wallet ? (wallet.balance || '0') : '0',
       suspiciousPatterns: riskFactors.map(rf => rf.factor),
-      receiverCountries: generateMockCountries()
-    }
+      receiverCountries: getCountriesFromTransactions(transactions),
+    },
   };
 }
 

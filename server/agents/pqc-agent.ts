@@ -1,21 +1,43 @@
 /**
  * PQC Agent - Post-Quantum Cryptography Operations
  * Main agent for PQC migration, assessment, and implementation
+ *
+ * Features:
+ * - Real cryptographic operations (simulated for dev, liboqs for production)
+ * - Dynamic cost calculation engine
+ * - FATF/NIST/FIPS compliance mapping
+ * - Cryptographic inventory scanning
  */
 
 import { BaseAgent, BaseSubAgent, AgentConfig, AgentContext, AgentResult, agentRegistry } from './base-agent';
+import {
+  generateKeyPair,
+  generateHybridKeyPair,
+  signHybrid,
+  verifyHybridSignature,
+  encapsulate,
+  scanCryptoInventory,
+  calculateQuantumRisk,
+  calculateMigrationCost,
+  assessCompliance,
+  ALGORITHM_INFO,
+  SECURITY_LEVELS,
+} from '../services/pqc-crypto';
 
 // ============================================
 // MAIN AGENT: PQC Agent
 // ============================================
 
 interface PQCInput {
-  action: 'assess' | 'migrate' | 'hybrid-sign' | 'compliance-check' | 'pki-modernize' | 'status';
+  action: 'assess' | 'migrate' | 'hybrid-sign' | 'compliance-check' | 'pki-modernize' | 'status' | 'generate-keys' | 'estimate-cost';
   organizationId?: string;
   keyType?: string;
   data?: string;
   framework?: string;
   priority?: 'low' | 'medium' | 'high' | 'critical';
+  algorithm?: 'CRYSTALS-Kyber' | 'CRYSTALS-Dilithium' | 'SPHINCS+';
+  urgency?: 'standard' | 'accelerated' | 'emergency';
+  complianceFrameworks?: string[];
 }
 
 const pqcAgentConfig: AgentConfig = {
@@ -69,6 +91,10 @@ export class PQCAgent extends BaseAgent {
             return this.modernizePKI(data);
           case 'status':
             return this.getStatus(data);
+          case 'generate-keys':
+            return this.generateKeys(data);
+          case 'estimate-cost':
+            return this.estimateCost(data);
           default:
             throw new Error(`Unknown action: ${data.action}`);
         }
@@ -86,84 +112,295 @@ export class PQCAgent extends BaseAgent {
   }
 
   private async performAssessment(data: PQCInput) {
+    const organizationId = data.organizationId || 'default-org';
+
+    // Perform real cryptographic inventory scan
+    const inventory = scanCryptoInventory(organizationId);
+    const riskAssessment = calculateQuantumRisk(inventory);
+
+    // Calculate cost estimate
+    const costEstimate = calculateMigrationCost(inventory, {
+      urgency: 'standard',
+      complianceFrameworks: data.complianceFrameworks || ['NIST'],
+      managedServicesRequired: true,
+      trainingRequired: true,
+    });
+
     return {
       assessmentId: `pqc_assess_${Date.now()}`,
-      organizationId: data.organizationId,
-      overallScore: 45,
-      quantumRisk: 'HIGH',
-      recommendations: [
-        'Implement hybrid signatures immediately',
-        'Begin key migration planning',
-        'Update compliance documentation',
-      ],
-      estimatedMigrationCost: {
-        min: 250000,
-        max: 1000000,
-        currency: 'USD',
+      organizationId,
+      inventory: {
+        totalKeys: inventory.length,
+        rsaKeys: inventory.filter(i => i.type === 'RSA').length,
+        ecdsaKeys: inventory.filter(i => i.type === 'ECDSA').length,
+        aesKeys: inventory.filter(i => i.type === 'AES').length,
+        quantumSafeKeys: inventory.filter(i => i.quantumSafe).length,
+        quantumVulnerableKeys: inventory.filter(i => !i.quantumSafe).length,
       },
-      timeline: '18-24 months',
+      riskAssessment: {
+        overallScore: riskAssessment.overallScore,
+        riskLevel: riskAssessment.riskLevel,
+        breakdown: riskAssessment.breakdown,
+        timeToQuantumThreat: riskAssessment.timeToQuantumThreat,
+      },
+      recommendations: riskAssessment.recommendations,
+      estimatedMigrationCost: {
+        min: costEstimate.totalMin,
+        max: costEstimate.totalMax,
+        currency: costEstimate.currency,
+      },
+      timeline: `${costEstimate.timeline.totalMonths} months`,
       assessedAt: new Date().toISOString(),
+      supportedAlgorithms: Object.keys(ALGORITHM_INFO),
+      securityLevels: SECURITY_LEVELS,
     };
   }
 
   private async planMigration(data: PQCInput) {
+    const organizationId = data.organizationId || 'default-org';
+    const inventory = scanCryptoInventory(organizationId);
+    const costEstimate = calculateMigrationCost(inventory, {
+      urgency: data.urgency || 'standard',
+      complianceFrameworks: data.complianceFrameworks || ['NIST'],
+      managedServicesRequired: true,
+      trainingRequired: true,
+    });
+
     return {
       migrationPlanId: `mig_${Date.now()}`,
-      phases: [
-        { phase: 1, name: 'Assessment & Inventory', duration: '2 months' },
-        { phase: 2, name: 'Hybrid Implementation', duration: '4 months' },
-        { phase: 3, name: 'Key Migration', duration: '6 months' },
-        { phase: 4, name: 'Full PQC Transition', duration: '6 months' },
-      ],
-      totalDuration: '18 months',
+      organizationId,
+      phases: costEstimate.timeline.phases.map((phase, index) => ({
+        phase: index + 1,
+        name: phase.name,
+        duration: `${phase.durationMonths} months`,
+        estimatedCost: phase.cost,
+      })),
+      totalDuration: `${costEstimate.timeline.totalMonths} months`,
       priority: data.priority || 'medium',
+      totalCost: costEstimate,
+      keysMigrating: inventory.filter(i => !i.quantumSafe).length,
+      targetAlgorithms: ['CRYSTALS-Kyber', 'CRYSTALS-Dilithium', 'SPHINCS+'],
     };
   }
 
   private async hybridSign(data: PQCInput) {
+    if (!data.data) {
+      throw new Error('Data to sign is required');
+    }
+
+    // Generate a hybrid key pair
+    const keyPair = generateHybridKeyPair('ECDSA-P256', 'CRYSTALS-Dilithium');
+
+    // Sign the data with hybrid signature
+    const signature = signHybrid(data.data, keyPair);
+
+    // Verify the signature
+    const verification = verifyHybridSignature(
+      data.data,
+      signature,
+      { classical: keyPair.classical.publicKey, quantum: keyPair.quantum.publicKey }
+    );
+
     return {
       signatureId: `sig_${Date.now()}`,
-      algorithm: 'SPHINCS+ + ECDSA',
-      classicalSignature: 'ecdsa_sig_here',
-      quantumSignature: 'sphincs_sig_here',
-      combinedHash: `hash_${Date.now()}`,
-      status: 'VALID',
+      algorithm: 'Hybrid (ECDSA-P256 + CRYSTALS-Dilithium)',
+      dataHash: require('crypto').createHash('sha256').update(data.data).digest('hex'),
+      signatures: {
+        classical: {
+          algorithm: signature.classical.algorithm,
+          signature: signature.classical.signature.slice(0, 64) + '...', // Truncate for display
+          securityLevel: signature.classical.securityLevel,
+        },
+        quantum: {
+          algorithm: signature.quantum.algorithm,
+          signature: signature.quantum.signature.slice(0, 64) + '...', // Truncate for display
+          securityLevel: signature.quantum.securityLevel,
+        },
+        combined: signature.combined.signature.slice(0, 64) + '...',
+      },
+      verification,
+      publicKeyFingerprint: keyPair.combined.fingerprint,
+      timestamp: new Date().toISOString(),
+      nistCompliance: {
+        fips204: true,
+        securityLevel: signature.quantum.securityLevel,
+      },
     };
   }
 
   private async checkCompliance(data: PQCInput) {
+    const organizationId = data.organizationId || 'default-org';
+    const inventory = scanCryptoInventory(organizationId);
+    const frameworks = data.complianceFrameworks || ['NIST', 'FIPS', 'ISO27001'];
+
+    const assessments = frameworks.map(fw => assessCompliance(fw, inventory));
+
+    const overallScore = Math.round(
+      assessments.reduce((sum, a) => sum + a.score, 0) / assessments.length
+    );
+
     return {
       complianceId: `comp_${Date.now()}`,
-      framework: data.framework || 'NIST',
-      status: 'PARTIAL',
-      score: 65,
-      gaps: [
-        'Missing PQC algorithm inventory',
-        'No hybrid signature implementation',
-        'Incomplete key management documentation',
+      organizationId,
+      overallScore,
+      overallStatus: overallScore >= 80 ? 'COMPLIANT' : overallScore >= 40 ? 'PARTIAL' : 'NON_COMPLIANT',
+      frameworkAssessments: assessments,
+      criticalGaps: assessments
+        .flatMap(a => a.requirements.filter(r => r.status === 'not_met'))
+        .map(r => ({ id: r.id, description: r.description, remediation: r.remediation })),
+      nextSteps: [
+        'Prioritize critical gap remediation',
+        'Implement hybrid signature support',
+        'Update cryptographic policy documentation',
+        'Schedule follow-up assessment in 90 days',
       ],
+      assessedAt: new Date().toISOString(),
     };
   }
 
   private async modernizePKI(data: PQCInput) {
+    const organizationId = data.organizationId || 'default-org';
+    const inventory = scanCryptoInventory(organizationId);
+    const rsaKeys = inventory.filter(i => i.type === 'RSA');
+    const ecdsaKeys = inventory.filter(i => i.type === 'ECDSA');
+
     return {
       pkiPlanId: `pki_${Date.now()}`,
-      currentState: 'RSA-2048',
-      targetState: 'Hybrid ECDSA + CRYSTALS-Dilithium',
-      phases: ['Inventory', 'Design', 'Pilot', 'Rollout'],
-      estimatedCost: { min: 10000, max: 50000, unit: 'USD/month' },
+      organizationId,
+      currentState: {
+        rootCAs: Math.ceil(rsaKeys.length / 50),
+        intermediateCAs: Math.ceil(rsaKeys.length / 20),
+        endEntityCerts: rsaKeys.length + ecdsaKeys.length,
+        algorithms: ['RSA-2048', 'RSA-4096', 'ECDSA-P256', 'ECDSA-P384'],
+        quantumSafe: false,
+      },
+      targetState: {
+        rootCAs: Math.ceil(rsaKeys.length / 50),
+        intermediateCAs: Math.ceil(rsaKeys.length / 20),
+        endEntityCerts: rsaKeys.length + ecdsaKeys.length,
+        algorithms: ['Hybrid (RSA-4096 + CRYSTALS-Dilithium)', 'Hybrid (ECDSA-P384 + CRYSTALS-Dilithium)'],
+        quantumSafe: true,
+      },
+      migrationPhases: [
+        { phase: 1, name: 'Root CA Upgrade', duration: '2 months', cost: 50000 },
+        { phase: 2, name: 'Intermediate CA Migration', duration: '3 months', cost: 75000 },
+        { phase: 3, name: 'End Entity Certificate Rollover', duration: '6 months', cost: 100000 },
+      ],
+      totalCost: { min: 225000, max: 500000, currency: 'USD' },
+      timeline: '11 months',
+      riskAssessment: {
+        downtime: 'Minimal (rolling updates)',
+        compatibility: 'High (hybrid approach maintains backward compatibility)',
+        securityGap: 'Low (parallel classical + quantum protection)',
+      },
     };
   }
 
   private async getStatus(data: PQCInput) {
+    const organizationId = data.organizationId || 'default-org';
+    const inventory = scanCryptoInventory(organizationId);
+    const riskAssessment = calculateQuantumRisk(inventory);
+
+    const quantumSafe = inventory.filter(i => i.quantumSafe).length;
+    const total = inventory.length;
+    const readiness = Math.round((quantumSafe / Math.max(total, 1)) * 100);
+
     return {
-      organizationId: data.organizationId,
-      overallReadiness: 45,
-      criticalSystems: 12,
-      migratedSystems: 3,
-      pendingSystems: 9,
-      nextMilestone: 'Complete hybrid signature pilot',
+      organizationId,
+      overallReadiness: readiness,
+      inventorySummary: {
+        totalKeys: total,
+        quantumSafe,
+        quantumVulnerable: total - quantumSafe,
+      },
+      riskLevel: riskAssessment.riskLevel,
+      riskScore: riskAssessment.overallScore,
+      migratedSystems: quantumSafe,
+      pendingSystems: total - quantumSafe,
+      nextMilestone: readiness < 25 ? 'Complete initial assessment'
+        : readiness < 50 ? 'Begin hybrid signature pilot'
+        : readiness < 75 ? 'Expand migration to critical systems'
+        : 'Complete full PQC transition',
       nextMilestoneDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      supportedAlgorithms: Object.keys(ALGORITHM_INFO),
+    };
+  }
+
+  private async generateKeys(data: PQCInput) {
+    const algorithm = data.algorithm || 'CRYSTALS-Dilithium';
+
+    if (algorithm === 'CRYSTALS-Kyber') {
+      // KEM algorithm - generate key and perform encapsulation demo
+      const keyPair = generateKeyPair(algorithm);
+      const encapsulated = encapsulate(keyPair.publicKey);
+
+      return {
+        operationId: `keygen_${Date.now()}`,
+        algorithm,
+        keyPair: {
+          publicKey: keyPair.publicKey.slice(0, 64) + '...', // Truncate for display
+          algorithm: keyPair.algorithm,
+          securityLevel: keyPair.securityLevel,
+          createdAt: keyPair.createdAt,
+          expiresAt: keyPair.expiresAt,
+        },
+        kemDemo: {
+          ciphertext: encapsulated.ciphertext.slice(0, 64) + '...',
+          sharedSecretGenerated: true,
+          securityLevel: encapsulated.securityLevel,
+        },
+        nistStandard: 'FIPS 203',
+      };
+    } else {
+      // Signature algorithm
+      const keyPair = generateKeyPair(algorithm as 'CRYSTALS-Dilithium' | 'SPHINCS+');
+
+      return {
+        operationId: `keygen_${Date.now()}`,
+        algorithm,
+        keyPair: {
+          publicKey: keyPair.publicKey.slice(0, 64) + '...', // Truncate for display
+          algorithm: keyPair.algorithm,
+          securityLevel: keyPair.securityLevel,
+          createdAt: keyPair.createdAt,
+          expiresAt: keyPair.expiresAt,
+        },
+        signatureCapable: true,
+        nistStandard: algorithm === 'CRYSTALS-Dilithium' ? 'FIPS 204' : 'FIPS 205',
+      };
+    }
+  }
+
+  private async estimateCost(data: PQCInput) {
+    const organizationId = data.organizationId || 'default-org';
+    const inventory = scanCryptoInventory(organizationId);
+
+    const costEstimate = calculateMigrationCost(inventory, {
+      urgency: data.urgency || 'standard',
+      complianceFrameworks: data.complianceFrameworks || ['NIST'],
+      managedServicesRequired: true,
+      trainingRequired: true,
+    });
+
+    return {
+      estimateId: `cost_${Date.now()}`,
+      organizationId,
+      costEstimate,
+      summary: {
+        totalRange: `$${costEstimate.totalMin.toLocaleString()} - $${costEstimate.totalMax.toLocaleString()} USD`,
+        timeline: `${costEstimate.timeline.totalMonths} months`,
+        keysToMigrate: inventory.filter(i => !i.quantumSafe).length,
+        systemsAffected: costEstimate.factors.systemCount,
+      },
+      breakdownSummary: Object.entries(costEstimate.breakdown)
+        .filter(([key]) => key !== 'managedServices')
+        .map(([phase, cost]) => ({
+          phase,
+          range: `$${(cost as { min: number; max: number }).min.toLocaleString()} - $${(cost as { min: number; max: number }).max.toLocaleString()}`,
+        })),
+      managedServices: costEstimate.breakdown.managedServices.monthlyMin > 0
+        ? `$${costEstimate.breakdown.managedServices.monthlyMin.toLocaleString()} - $${costEstimate.breakdown.managedServices.monthlyMax.toLocaleString()}/month`
+        : 'Not included',
     };
   }
 }

@@ -11,16 +11,45 @@ export default function FraudService() {
     mutationFn: async () => {
       setIsAnalyzing(true);
       try {
+        // #region agent log
+        const requestBody = {
+          fileHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`,
+          analysisType: "combined",
+        };
+        fetch('http://127.0.0.1:7242/ingest/b80fd094-512e-4e48-b4fb-d00c68e5e41a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fraud-service.tsx:17',message:'Frontend sending request',data:{requestBody,hasUserId:!!requestBody.userId,hasTransactionId:!!requestBody.transactionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         const response = await fetch("/api/fraud/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`,
-            analysisType: "combined",
-          }),
+          body: JSON.stringify(requestBody),
         });
-        if (!response.ok) throw new Error("Fraud analysis failed");
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b80fd094-512e-4e48-b4fb-d00c68e5e41a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fraud-service.tsx:22',message:'Response received',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        if (!response.ok) {
+          // #region agent log
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText };
+          }
+          console.error('[DEBUG] Fraud analysis failed', { status: response.status, errorData });
+          fetch('http://127.0.0.1:7242/ingest/b80fd094-512e-4e48-b4fb-d00c68e5e41a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fraud-service.tsx:29',message:'Response not OK',data:{status:response.status,errorText,errorData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          const errorMessage = errorData.message || errorData.error || `Fraud analysis failed (${response.status})`;
+          throw new Error(errorMessage);
+        }
         const data = await response.json();
+        // #region agent log
+        console.log('[DEBUG] Fraud analysis response', { data, hasFraudDetection: !!data.fraudDetection });
+        fetch('http://127.0.0.1:7242/ingest/b80fd094-512e-4e48-b4fb-d00c68e5e41a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fraud-service.tsx:36',message:'Response data parsed',data:{hasFraudDetection:!!data.fraudDetection,responseKeys:Object.keys(data),fraudDetectionKeys:data.fraudDetection?Object.keys(data.fraudDetection):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        if (!data.fraudDetection) {
+          console.error('[DEBUG] Missing fraudDetection in response', data);
+          throw new Error('Invalid response: missing fraudDetection');
+        }
         toast.success("🛡️ Fraud Analysis Complete", {
           description: `Risk: ${data.fraudDetection.overallRisk} | Confidence: ${(data.fraudDetection.confidence * 100).toFixed(1)}%`,
         });

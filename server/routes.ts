@@ -1,16 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { cachedStorage } from "./services/cached-storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { z } from "zod";
-import {
-  insertCBDCTransactionSchema,
-  insertX402PaymentSchema,
-  insertOfflineBatchSchema,
-  insertKYCVerificationSchema,
-  insertFraudAnalysisSchema,
-  insertCBDCWalletSchema
-} from "@shared/schema";
 import { randomUUID } from "crypto";
 import { getAllAgents, executeAgent, getAgentNames, hasAgent, agentRegistry, getAgentStats } from "./agents";
 import { analyzeFraudPatterns } from "./fraud-detector";
@@ -268,13 +260,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/fraud/analyze", isAuthenticated, async (req: any, res) => {
     try {
       const { userId, transactionId } = req.body;
+      const authenticatedUserId = req.user.claims.sub;
 
-      if (!userId && !transactionId) {
+      // Use authenticated user ID as fallback if userId/transactionId not provided
+      if (!userId && !transactionId && !authenticatedUserId) {
         return res.status(400).json({ error: "userId or transactionId required" });
       }
 
-      // Get user ID from transaction if provided
-      let targetUserId = userId;
+      // Get user ID from transaction if provided, otherwise use userId or authenticatedUserId
+      let targetUserId = userId || authenticatedUserId;
+
+      if (!targetUserId) {
+        return res.status(400).json({ error: "Unable to determine user ID. Please provide userId or transactionId, or ensure you are authenticated." });
+      }
+
       if (transactionId) {
         const transaction = await storage.getCBDCTransactionByTxId(transactionId);
         if (!transaction) {
@@ -283,10 +282,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetUserId = transaction.senderId;
       }
 
-      // Get data for analysis
-      const transactions = await storage.getTransactionsByUserId(targetUserId);
-      const recentTxs = await storage.getRecentTransactions(targetUserId, 24);
-      const wallet = await storage.getCBDCWalletByUserId(targetUserId);
+      // Get data for analysis (using cached storage for performance)
+      const [transactions, recentTxs, wallet] = await Promise.all([
+        cachedStorage.getTransactionsByUserId(targetUserId),
+        cachedStorage.getRecentTransactions(targetUserId, 24),
+        cachedStorage.getCBDCWalletByUserId(targetUserId),
+      ]);
 
       // Run fraud detection analysis
       const fraudAnalysis = await analyzeFraudPatterns({
@@ -300,8 +301,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create analysis ID
       const analysisId = `fraud_${randomUUID().slice(0, 12)}`;
 
-      // Store analysis
-      const analysis = await storage.createFraudAnalysis({
+      // Store analysis (using cached storage)
+      const analysis = await cachedStorage.createFraudAnalysis({
         analysisId,
         fileHash: transactionId || `user_${targetUserId}`,
         analysisType: "behavioral",
@@ -348,7 +349,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Fraud analysis error:", error);
-      res.status(500).json({ error: "Fraud analysis failed" });
+      res.status(500).json({
+        error: "Fraud analysis failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   });
 
@@ -411,6 +415,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Transaction retrieval error:", error);
       res.status(500).json({ error: "Failed to retrieve transactions" });
+    }
+  });
+
+  // ============================================
+  // CACHE MANAGEMENT API ROUTES
+  // ============================================
+
+  // Get cache statistics (public)
+  app.get("/api/cache/stats", async (req, res) => {
+    try {
+      const stats = cachedStorage.getCacheStats();
+      res.json({
+        success: true,
+        usingRedis: cachedStorage.isUsingRedis(),
+        stats,
+      });
+    } catch (error) {
+      console.error("Error fetching cache stats:", error);
+      res.status(500).json({ error: "Failed to fetch cache stats" });
     }
   });
 
