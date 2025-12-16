@@ -9,8 +9,14 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
+// Check if we're in a Replit environment
+const isReplitEnvironment = process.env.REPLIT === "true" || process.env.REPL_SLUG;
+
 const getOidcConfig = memoize(
   async () => {
+    if (!isReplitEnvironment) {
+      return null; // Skip OIDC in non-Replit environments
+    }
     return await client.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
       process.env.REPL_ID!
@@ -70,6 +76,26 @@ export async function setupAuth(app: Express) {
   app.use(passport.session());
 
   const config = await getOidcConfig();
+
+  // Skip OIDC setup in non-Replit environments
+  if (!config) {
+    console.log("Running in non-Replit environment - auth endpoints disabled");
+
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+    // Provide stub auth endpoints
+    app.get("/api/login", (_req, res) => {
+      res.status(503).json({ message: "Authentication not available in this environment" });
+    });
+    app.get("/api/callback", (_req, res) => {
+      res.redirect("/app");
+    });
+    app.get("/api/logout", (req, res) => {
+      req.logout(() => res.redirect("/"));
+    });
+    return;
+  }
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
@@ -134,6 +160,11 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // In non-Replit environments, allow all requests (no auth required)
+  if (!isReplitEnvironment) {
+    return next();
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
@@ -153,6 +184,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   try {
     const config = await getOidcConfig();
+    if (!config) return next();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
     return next();
