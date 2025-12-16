@@ -1,0 +1,11 @@
+TAURUS AI Business Intelligence Hub - Active Processes
+Generated: Mon Sep 29 14:41:13 EDT 2025
+
+BizFlow Orchestrator: 69839
+Webflow Automation: 69840
+Intelligence Dashboard: 69841
+Social Content Generator: 69842
+Regulatory Monitor: 69843
+Chrome DevTools: 69844
+
+To stop all processes: kill 69839 69840 69841 69842 69843 69844

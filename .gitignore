@@ -1,0 +1,60 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+!.env.example
+
+# Hedera credentials & proprietary
+.hedera/
+server/proprietary/
+**/hedera-secrets/
+**/*private-key*
+**/*account-id*
+**/keys/
+
+# Database
+*.db
+*.sqlite
+.database/
+
+# ML Models (proprietary)
+server/ml-models/
+*.pkl
+*.h5
+*.onnx
+
+# Build & Dependencies
+node_modules/
+dist/
+build/
+.next/
+.cache
+.local
+.upm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.code-workspace
+
+# Secrets & Config
+secrets.ts
+secrets.json
+config/production.ts
+firebase-adminsdk.json
+.git/objects/
+
+# Office files
+*.pptx
+*.ppt
+attached_assets/*.pptx
+attached_assets/*.ppt
+
+# Logs
+*.log
+logs/
+.DS_Store
+coverage/

@@ -1,0 +1,9 @@
+{
+  "projectPath": "/Users/user/Documents/HEDERA/Q-GRID",
+  "multiAIHome": "/Users/user/Documents/HEDERA/multi-ai-devops",
+  "geminiCLI": "/Users/user/.npm-global/bin/gemini",
+  "defaultModel": "gemini-flash",
+  "fallbackModel": "claude-sonnet",
+  "enableOSINT": true,
+  "enableVertexAI": true
+}

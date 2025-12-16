@@ -1,0 +1,31 @@
+{
+  "name": "@hedera-quantum/quantum-crypto-mcp",
+  "version": "1.0.0",
+  "description": "Quantum Crypto MCP Server - ML-DSA/ML-KEM operations via MCP",
+  "main": "server.js",
+  "type": "module",
+  "bin": {
+    "quantum-crypto-mcp": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "mcp",
+    "quantum",
+    "cryptography",
+    "ml-dsa",
+    "ml-kem",
+    "hedera"
+  ],
+  "author": "TAURUS AI",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@hedera-quantum/crypto-core": "file:../../quantum-crypto-core"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
